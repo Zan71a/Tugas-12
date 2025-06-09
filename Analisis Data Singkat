@@ -1,0 +1,12 @@
+# Jumlah pengguna dan film
+num_users = df['user_id'].nunique()
+num_movies = df['item_id'].nunique()
+rating_distribution = df['rating'].value_counts().sort_index()
+
+print(f"Jumlah pengguna: {num_users}")
+print(f"Jumlah film: {num_movies}")
+print("Distribusi rating:\n", rating_distribution)
+
+# Cek pengguna dan film dengan rating terlalu sedikit
+user_counts = df['user_id'].value_counts()
+movie_counts = df['item_id'].value_counts()
