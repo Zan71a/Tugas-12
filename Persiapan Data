@@ -1,0 +1,10 @@
+import pandas as pd
+
+# Load data
+ratings = pd.read_csv('u.data', sep='\t', names=['user_id', 'item_id', 'rating', 'timestamp'])
+movies = pd.read_csv('u.item', sep='|', encoding='latin-1', header=None,
+                     names=['item_id', 'title'] + [f'genre_{i}' for i in range(19)],
+                     usecols=[0, 1])
+
+# Gabungkan data
+df = pd.merge(ratings, movies, on='item_id')
