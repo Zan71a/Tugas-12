@@ -1,0 +1,62 @@
+#User-based Collaborative Filtering
+
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.model_selection import train_test_split
+
+# Buat pivot tabel user-item
+user_item_matrix = df.pivot_table(index='user_id', columns='title', values='rating').fillna(0)
+
+# Cosine similarity antar pengguna
+similarity = cosine_similarity(user_item_matrix)
+similar_users = pd.DataFrame(similarity, index=user_item_matrix.index, columns=user_item_matrix.index)
+
+# Fungsi rekomendasi
+def recommend_user_based(user_id, num_recommendations=5):
+    similar_scores = similar_users[user_id].sort_values(ascending=False)[1:6]
+    weighted_scores = user_item_matrix.loc[similar_scores.index].mean().sort_values(ascending=False)
+    user_rated = user_item_matrix.loc[user_id]
+    recommendations = weighted_scores[user_rated == 0].head(num_recommendations)
+    return recommendations
+
+# Contoh untuk user ID 50
+print("Rekomendasi untuk user 50 (User-Based):")
+print(recommend_user_based(50))
+
+
+#Content-based Filtering
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+
+# Gunakan hanya genre
+movies = pd.read_csv('u.item', sep='|', encoding='latin-1', header=None,
+                     names=['item_id', 'title', 'release_date', 'video_release_date', 'IMDb_URL',
+                            'unknown', 'Action', 'Adventure', 'Animation', 'Children\'s', 'Comedy',
+                            'Crime', 'Documentary', 'Drama', 'Fantasy', 'Film-Noir', 'Horror',
+                            'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western'],
+                     usecols=[0, 1] + list(range(5, 24)))
+
+# Gabungkan genre jadi satu string
+genre_columns = movies.columns[2:]
+movies['genre'] = movies[genre_columns].apply(lambda row: ' '.join(genre_columns[row == 1]), axis=1)
+
+# TF-IDF pada genre
+tfidf = TfidfVectorizer()
+tfidf_matrix = tfidf.fit_transform(movies['genre'])
+
+# Cosine similarity antar film
+cos_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
+
+# Rekomendasi berdasarkan film yang pernah disukai user
+def recommend_content_based(user_id, num_recommendations=5):
+    user_ratings = df[df['user_id'] == user_id]
+    top_rated = user_ratings[user_ratings['rating'] >= 4].sort_values(by='rating', ascending=False)
+    watched_indices = top_rated['item_id'].values
+    sim_scores = cos_sim[watched_indices].mean(axis=0)
+    sim_scores = list(enumerate(sim_scores))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    recommended = [i for i, score in sim_scores if i not in watched_indices][:num_recommendations]
+    return movies.iloc[recommended][['title']]
+
+print("Rekomendasi untuk user 50 (Content-Based):")
+print(recommend_content_based(50))
